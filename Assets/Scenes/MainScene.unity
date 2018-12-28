@@ -222,7 +222,7 @@ MonoBehaviour:
   _circleRadius: 100
   _minRoomSizeRatio: 4
   _roomMinSize: 5
-  _corridorSize: 5
+  _corridorSize: 3
   _percentEdgesToAddBack: 0.1
   _mainRoomSizeThreshold: 1.2
 --- !u!1 &1792289283

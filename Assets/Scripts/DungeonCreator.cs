@@ -21,6 +21,7 @@ public class DungeonCreator : MonoBehaviour
 
     private List<Room> _roomsList;
     private List<Room> _mainRoomsList;
+    private List<Room> _corriders;
     private List<Vector2> _vertices;
     private HashSet<Edge> _mstEdges;
 
@@ -28,8 +29,6 @@ public class DungeonCreator : MonoBehaviour
     private Dictionary<Vector2, List<Vector2>> _roomConnections;
 
     private DelaunayTriangulation2 _delaunayTriangulation;
-    private Material _lineMaterial;
-
 
     private Color[] _roomColors =
     {
@@ -45,10 +44,10 @@ public class DungeonCreator : MonoBehaviour
         Physics2D.autoSimulation = false;
         _roomsList = new List<Room>();
         _mainRoomsList = new List<Room>();
+        _corriders = new List<Room>();
         _vertices = new List<Vector2>();
         _midpointToRoomMapping = new Dictionary<Vector2, Room>();
         _roomConnections = new Dictionary<Vector2, List<Vector2>>();
-        _lineMaterial = new Material(Shader.Find("Hidden/Internal-Colored"));
 
         GenerateRooms();
         SeperateRooms();
@@ -56,6 +55,8 @@ public class DungeonCreator : MonoBehaviour
         FindMainRooms();
         CreateGraph();
 
+        // connect rooms using minimum spanning tree
+        //  then add back some edges to make the dungeon interesting
         _mstEdges = MST();
         AddBackSomeEdgesToMST();
 
@@ -122,7 +123,6 @@ public class DungeonCreator : MonoBehaviour
             }
         }
 
-        Debug.Log("times simulated: " + physicsTimesSimulated);
         Time.timeScale = 1;
     }
 
@@ -147,6 +147,7 @@ public class DungeonCreator : MonoBehaviour
             else
             {
                 room.SetColor(Color.white);
+                room.TurnOff();
             }
         }
     }
@@ -232,21 +233,81 @@ public class DungeonCreator : MonoBehaviour
             Room one = _midpointToRoomMapping[edge.GetVertex(0)];
             Room two = _midpointToRoomMapping[edge.GetVertex(1)];
 
-            one.SetColor(Color.red);
-            two.SetColor(Color.red);
+            bool intersectingHorizontally = RoomsIntersectHorizontally(one, two);
+            bool intersectingVertically = RoomsIntersectVertically(one, two);
 
             // if the rooms intersect vertically and horizontally then they are 
             //  right next to each other
-            Debug.Log("horizontally: " + RoomsIntersectHorizontally(one, two));
-            Debug.Log("vertically: " + RoomsIntersectVertically(one, two));
 
-            break;
+            // if both true then rooms are touching
+            if (intersectingHorizontally && intersectingVertically)
+            {
+                continue;
+            }
+            else if (intersectingHorizontally == false && intersectingVertically == false)
+            {
+                List<Room> connectingCorriders = ConnectNonIntersectingRooms(one, two, true);
+                if (RoomsOverlapsWithOtherRooms(connectingCorriders, _mainRoomsList))
+                {
+                    foreach (Room room in connectingCorriders)
+                    {
+                        Destroy(room.gameObject);
+                    }
+                }
+                else
+                {
+                    _corriders.AddRange(connectingCorriders);
+                    continue;
+                }
+
+                connectingCorriders = ConnectNonIntersectingRooms(one, two, false);
+                if (RoomsOverlapsWithOtherRooms(connectingCorriders, _mainRoomsList))
+                {
+                    foreach (Room room in connectingCorriders)
+                    {
+                        Destroy(room.gameObject);
+                    }
+                }
+                else
+                {
+                    _corriders.AddRange(connectingCorriders);
+                }
+            }
+            else if (intersectingHorizontally)
+            {
+                Room horizontalRoom =  ConnectRoomsHorizontally(one, two);
+                if (RoomsOverlapsWithOtherRooms(new List<Room> { horizontalRoom }, _mainRoomsList))
+                {
+                    Destroy(horizontalRoom.gameObject);
+                }
+                else
+                {
+                    _corriders.Add(horizontalRoom);
+                }
+            }
+            else if (intersectingVertically)
+            {
+                Room verticalRoom = ConnectRoomsVertically(one, two);
+                if (RoomsOverlapsWithOtherRooms(new List<Room> { verticalRoom }, _mainRoomsList))
+                {
+                    Destroy(verticalRoom.gameObject);
+                }
+                else
+                {
+                    _corriders.Add(verticalRoom);
+                }
+            }
         }
     }
 
     private void AddBackIntersectingRooms()
-    { 
-    
+    {
+        List<Room> intersectingRooms = FindIntersectingRoomsInSecondList(_corriders, _roomsList);
+
+        foreach (Room room in intersectingRooms)
+        {
+            room.TurnOn();
+        }
     }
 
     // HELPER FUNCTIONS //
@@ -261,6 +322,7 @@ public class DungeonCreator : MonoBehaviour
 
         return new Vector2(x, y);
     }
+
 
     private float NextGaussianDouble()
     {
@@ -278,6 +340,7 @@ public class DungeonCreator : MonoBehaviour
         return u * fac;
     }
 
+
     private int NumOfRoomsAwake()
     {
 
@@ -290,6 +353,7 @@ public class DungeonCreator : MonoBehaviour
 
         return numAwake;
     }
+
 
     private Color GetRandomRoomColor()
     {
@@ -318,6 +382,7 @@ public class DungeonCreator : MonoBehaviour
         }
     }
 
+
     private void Shuffle<T>(IList<T> list)
     {
         int n = list.Count;
@@ -331,73 +396,229 @@ public class DungeonCreator : MonoBehaviour
         }
     }
 
+
+    private Room ConnectRoomsHorizontally(Room one, Room two)
+    {
+        if (two.transform.position.x < one.transform.position.x)
+        {
+            Room temp = one;
+            one = two;
+            two = temp;
+        }
+
+        float yStart = FindHorizontalCorridorYStartValue(one, two);
+
+        // get the x position to start at
+        // The Edge class orders vertices from left to right
+        float xStart = one.transform.position.x + one._width;
+
+        // find out how long corridor should be
+        float length = two.transform.position.x - xStart;
+        Room newRoom = Instantiate(_roomPrototype, new Vector2(xStart, yStart), Quaternion.identity).GetComponent<Room>();
+        newRoom.SetSize((int)length, _corridorSize);
+        newRoom.SetColor(_roomColors[4]);
+
+        return newRoom;
+    }
+
+
+    private Room ConnectRoomsVertically(Room one, Room two)
+    {
+        if (two.transform.position.y < one.transform.position.y)
+        {
+            Room temp = one;
+            one = two;
+            two = temp;
+        }
+
+        float xStart = FindVerticalCorridorXStartValue(one, two);
+
+        // get the y position to start at
+        float yStart = one.transform.position.y + one._height;
+
+        // find out how high corridor should be
+        float height = two.transform.position.y - yStart;
+        Room newRoom = Instantiate(_roomPrototype, new Vector2(xStart, yStart), Quaternion.identity).GetComponent<Room>();
+        newRoom.SetSize(_corridorSize, (int)height);
+        newRoom.SetColor(_roomColors[4]);
+
+        return newRoom;
+    }
+
+    private List<Room> ConnectNonIntersectingRooms(Room one, Room two, bool connectVerticallyFirst)
+    {
+        int xStart, yStart;
+
+        Room verticalRoomToConnect, horizontalRoomToConnect;
+
+        if (connectVerticallyFirst)
+        {
+            xStart = Mathf.FloorToInt(Random.Range(one.transform.position.x, one.transform.position.x + one._width - _corridorSize));
+            yStart = Mathf.FloorToInt(Random.Range(two.transform.position.y, two.transform.position.y + two._height - _corridorSize));
+
+            verticalRoomToConnect = one;
+            horizontalRoomToConnect = two;
+        }
+        else
+        {
+            xStart = Mathf.FloorToInt(Random.Range(two.transform.position.x, two.transform.position.x + two._width - _corridorSize));
+            yStart = Mathf.FloorToInt(Random.Range(one.transform.position.y, one.transform.position.y + one._height - _corridorSize));
+
+            verticalRoomToConnect = two;
+            horizontalRoomToConnect = one;
+        }
+
+        // create a baby room between room one and two
+        Room newRoom = Instantiate(_roomPrototype, new Vector2(xStart, yStart), Quaternion.identity).GetComponent<Room>();
+        newRoom.SetSize(_corridorSize, _corridorSize);
+        newRoom.SetColor(_roomColors[3]);
+
+        Room verticalRoom = ConnectRoomsVertically(verticalRoomToConnect, newRoom);
+        Room horizontalRoom = ConnectRoomsHorizontally(newRoom, horizontalRoomToConnect);
+
+        return new List<Room> { newRoom, verticalRoom, horizontalRoom };
+    }
+
+
     private bool RoomsIntersectVertically(Room one, Room two)
     {
         float roomOneLeftSideXValue = one.transform.position.x;
-        float roomOneRightSideXValue = roomOneLeftSideXValue + one._width;
+        float roomOneRightSideXValue = roomOneLeftSideXValue + one._width - _corridorSize;
 
         float roomTwoLeftSideXValue = two.transform.position.x;
-        float roomTwoRightSideXValue = roomTwoLeftSideXValue + two._width;
+        float roomTwoRightSideXValue = roomTwoLeftSideXValue + two._width - _corridorSize;
 
         return (roomOneLeftSideXValue <= roomTwoRightSideXValue && roomOneRightSideXValue >= roomTwoLeftSideXValue);
     }
 
+
     private bool RoomsIntersectHorizontally(Room one, Room two)
     {
         float roomOneBottomSideYValue = one.transform.position.y;
-        float roomOneTopSideYValue = roomOneBottomSideYValue + one._height;
+        float roomOneTopSideYValue = roomOneBottomSideYValue + one._height - _corridorSize;
 
         float roomTwoBottomSideYValue = two.transform.position.y;
-        float roomTwoTopSideYValue = roomTwoBottomSideYValue + two._height;
+        float roomTwoTopSideYValue = roomTwoBottomSideYValue + two._height - _corridorSize;
 
         return (roomOneBottomSideYValue <= roomTwoTopSideYValue && roomOneTopSideYValue >= roomTwoBottomSideYValue);
     }
 
-    // GRAPH FUNCTIONS //
 
-    private void OnDrawGizmos()
+    private List<Room> FindIntersectingRoomsInSecondList(List<Room> roomsToCheck, List<Room> otherRooms)
     {
-        if (_delaunayTriangulation == null || _delaunayTriangulation.Cells.Count == 0 || _delaunayTriangulation.Vertices.Count == 0)
+        List<Room> intersectingRooms = new List<Room>();
+
+        foreach (Room mainRoom in otherRooms)
         {
-            return;
-        }
-
-        // first lets just draw the circles around our main rooms
-        Gizmos.color = Color.yellow;
-        foreach (Vector2 vertex in _vertices)
-        {
-            Gizmos.DrawSphere(new Vector3(vertex.x, vertex.y, 0), 3);
-        }
-
-        //DrawEdges();
-        DrawMST();
-    }
-
-    private void DrawMST()
-    {
-        if (_mstEdges.Count == 0)
-        {
-            return;
-        }
-
-        Gizmos.color = Color.green;
-
-        foreach (Edge edge in _mstEdges)
-        {
-            Gizmos.DrawLine(edge.GetVertex(0), edge.GetVertex(1));
-        }
-    }
-
-    private void DrawEdges()
-    {
-        Gizmos.color = Color.red;
-
-        foreach (Vector2 vertex in _roomConnections.Keys)
-        {
-            foreach (Vector2 vertexTo in _roomConnections[vertex])
+            foreach (Room roomToCheck in roomsToCheck)
             {
-                Gizmos.DrawLine(vertex, vertexTo);
+                if (RoomsOverlap(mainRoom, roomToCheck))
+                {
+                    intersectingRooms.Add(mainRoom);
+                }
             }
         }
+
+        return intersectingRooms;
     }
+
+
+    private bool RoomsOverlapsWithOtherRooms(List<Room> roomsToCheck, List<Room> otherRooms)
+    {
+        foreach (Room mainRoom in otherRooms)
+        {
+            foreach (Room roomToCheck in roomsToCheck)
+            {
+                if (RoomsOverlap(mainRoom, roomToCheck))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    private bool RoomsOverlap(Room one, Room two)
+    {
+        var ax1 = one.transform.position.x;
+        var ay1 = one.transform.position.y;
+        var ax2 = one.transform.position.x + one._width;
+        var ay2 = one.transform.position.y + one._height;
+
+        var bx1 = two.transform.position.x;
+        var by1 = two.transform.position.y;
+        var bx2 = two.transform.position.x + two._width;
+        var by2 = two.transform.position.y + two._height;
+
+        return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
+    }
+
+
+    private float FindHorizontalCorridorYStartValue(Room one, Room two)
+    {
+        // find the higher of the bottom points
+        float topY = Mathf.Min(one.transform.position.y + one._height, two.transform.position.y + two._height) - _corridorSize;
+        float bottomY = Mathf.Max(one.transform.position.y, two.transform.position.y);
+
+        return Mathf.FloorToInt(Random.Range(bottomY, topY));
+    }
+
+    private float FindVerticalCorridorXStartValue(Room one, Room two)
+    {
+        float rightX = Mathf.Min(one.transform.position.x + one._width, two.transform.position.x + two._width) - _corridorSize;
+        float leftX = Mathf.Max(one.transform.position.x, two.transform.position.x);
+
+        return Mathf.FloorToInt(Random.Range(leftX, rightX));
+    }
+
+
+    // GRAPH FUNCTIONS //
+
+    //private void OnDrawGizmos()
+    //{
+    //    if (_delaunayTriangulation == null || _delaunayTriangulation.Cells.Count == 0 || _delaunayTriangulation.Vertices.Count == 0)
+    //    {
+    //        return;
+    //    }
+
+    //    // first lets just draw the circles around our main rooms
+    //    Gizmos.color = Color.yellow;
+    //    foreach (Vector2 vertex in _vertices)
+    //    {
+    //        Gizmos.DrawSphere(new Vector3(vertex.x, vertex.y, 0), 3);
+    //    }
+
+    //    //DrawEdges();
+    //    DrawMST();
+    //}
+
+    //private void DrawMST()
+    //{
+    //    if (_mstEdges.Count == 0)
+    //    {
+    //        return;
+    //    }
+
+    //    Gizmos.color = Color.green;
+
+    //    foreach (Edge edge in _mstEdges)
+    //    {
+    //        Gizmos.DrawLine(edge.GetVertex(0), edge.GetVertex(1));
+    //    }
+    //}
+
+    //private void DrawEdges()
+    //{
+    //    Gizmos.color = Color.red;
+
+    //    foreach (Vector2 vertex in _roomConnections.Keys)
+    //    {
+    //        foreach (Vector2 vertexTo in _roomConnections[vertex])
+    //        {
+    //            Gizmos.DrawLine(vertex, vertexTo);
+    //        }
+    //    }
+    //}
 }
