@@ -20,6 +20,11 @@ public class Room : MonoBehaviour
         gameObject.SetActive(true);
     }
 
+    public void TurnOffCollision()
+    {
+        _boxCollider.enabled = false;
+    }
+
     public void TurnOnCollision()
     {
         _boxCollider.enabled = true;

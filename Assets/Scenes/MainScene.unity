@@ -124,7 +124,6 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
-  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -159,7 +158,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BackGroundColor: {r: 0.39377213, g: 0, b: 1, a: 0}
   m_projectionMatrixMode: 1
   m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
@@ -174,7 +173,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 200
+  orthographic size: 20
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -203,28 +202,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &519420033
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: accf972d17af049939bac9157be0c2b1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _roomPrototype: {fileID: 1370654495721200, guid: f5f53c0fae2ec42329feee5bcb982127,
-    type: 2}
-  _numberOfRooms: 60
-  _roomSizeMean: 30
-  _roomSizeStandardDeviation: 18
-  _circleRadius: 100
-  _minRoomSizeRatio: 4
-  _roomMinSize: 5
-  _corridorSize: 3
-  _percentEdgesToAddBack: 0.1
-  _mainRoomSizeThreshold: 1.2
 --- !u!1 &1792289283
 GameObject:
   m_ObjectHideFlags: 0
@@ -234,20 +211,21 @@ GameObject:
   m_Component:
   - component: {fileID: 1792289285}
   - component: {fileID: 1792289284}
+  - component: {fileID: 1792289286}
   m_Layer: 0
   m_Name: DungeonCreator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1792289284
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1792289283}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: accf972d17af049939bac9157be0c2b1, type: 3}
   m_Name: 
@@ -255,13 +233,13 @@ MonoBehaviour:
   _roomPrototype: {fileID: 1370654495721200, guid: f5f53c0fae2ec42329feee5bcb982127,
     type: 2}
   _numberOfRooms: 60
-  _roomSizeMean: 37
-  _roomSizeStandardDeviation: 20
-  _circleRadius: 30
-  _minRoomSizeRatio: 4
+  _roomSizeMean: 23
+  _roomSizeStandardDeviation: 14
+  _circleRadius: 100
+  _minRoomSizeRatio: 6
   _roomMinSize: 5
-  _corridorSize: 0
-  _percentEdgesToAddBack: 0
+  _corridorSize: 3
+  _percentEdgesToAddBack: 0.1
   _mainRoomSizeThreshold: 1.2
 --- !u!4 &1792289285
 Transform:
@@ -276,3 +254,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1792289286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1792289283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41d74e6df77fd4013ad188f6b0e73b7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _roomPrototype: {fileID: 1370654495721200, guid: f5f53c0fae2ec42329feee5bcb982127,
+    type: 2}
+  _numberOfWalkers: 1
+  _numberOfIterations: 15

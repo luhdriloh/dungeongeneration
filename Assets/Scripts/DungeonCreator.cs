@@ -62,6 +62,8 @@ public class DungeonCreator : MonoBehaviour
 
         CreateCorridors();
         AddBackIntersectingRooms();
+
+        // return the lisrt of rooms at the end
     }
 
     private void GenerateRooms()
@@ -306,6 +308,7 @@ public class DungeonCreator : MonoBehaviour
 
         foreach (Room room in intersectingRooms)
         {
+            room.TurnOffCollision();
             room.TurnOn();
         }
     }
