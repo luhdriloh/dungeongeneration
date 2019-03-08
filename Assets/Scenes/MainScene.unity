@@ -267,5 +267,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _roomPrototype: {fileID: 1370654495721200, guid: f5f53c0fae2ec42329feee5bcb982127,
     type: 2}
-  _numberOfWalkers: 1
-  _numberOfIterations: 15
+  _overlapAllowed: 0
+  _numberOfWalkers: 3
+  _numberOfIterations: 50

@@ -13,7 +13,7 @@ public enum Direction
 
 public class DrunkWalker
 {
-    private Vector2 _position;
+    public Vector2 Position { get; set; }
     private readonly Dictionary<Direction, Vector2> _directionToMovementMapping = new Dictionary<Direction, Vector2>
     {
         { Direction.NORTH, new Vector2(0, 1) },
@@ -24,13 +24,13 @@ public class DrunkWalker
 
     public DrunkWalker(Vector2 startPosition)
     {
-        _position = startPosition;
+        Position = startPosition;
     }
 
     public Vector2 WalkInRandomDirection()
     {
         Direction directionForWalkerToGo = (Direction)Random.Range(0, 4);
-        _position += _directionToMovementMapping[directionForWalkerToGo];
-        return _position;
+        Position += _directionToMovementMapping[directionForWalkerToGo];
+        return Position;
     }
 }
